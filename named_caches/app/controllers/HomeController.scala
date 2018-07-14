@@ -6,12 +6,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import play.api.cache._
 import play.api.cache.redis.CacheAsyncApi
+import play.api.cache.Cached
 import play.api.mvc._
 import scala.concurrent.duration._
-
 @Singleton
 class HomeController @Inject()
 (
+  cached: Cached,
   // default unqualified instance, equal to "local"
   cache: CacheAsyncApi,
   // instance with DB 1
@@ -44,14 +45,16 @@ class HomeController @Inject()
 
   def messageInFailing = action(failing, "failing")
 
-  def index = Action.async {
-    for {
-      default <- this.messageInDefault
-      local <- this.messageInLocal
-      remote <- this.messageInRemote
-      failing <- this.messageInFailing
-    } yield {
-      Ok(views.html.index(default, local, remote, failing, now.asString))
+  def index = /*cached(_ => "homepage", duration = 4)*/ {
+    Action.async {
+      for {
+        default <- this.messageInDefault
+        local <- this.messageInLocal
+        remote <- this.messageInRemote
+        failing <- this.messageInFailing
+      } yield {
+        Ok(views.html.index(default, local, remote, failing, now.asString))
+      }
     }
   }
 }
