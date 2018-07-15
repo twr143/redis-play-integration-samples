@@ -1,16 +1,13 @@
 package controllers
-
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject._
-
+import controllers.MyObject.nextIndex
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
 import play.api.cache.redis.CacheAsyncApi
 import play.api.mvc._
-
 /**
   *
   *
@@ -31,18 +28,16 @@ import play.api.mvc._
   *
   */
 @Singleton
-class HomeController @Inject()( cache: CacheAsyncApi, cc: ControllerComponents )( implicit executionContext: ExecutionContext ) extends AbstractController( cc ) {
+class HomeController @Inject()(cache: CacheAsyncApi, cc: ControllerComponents)(implicit executionContext: ExecutionContext) extends AbstractController(cc) {
   import Imports._
-
   /**
     *
     * Using getOrElse method get or compute and save a simple String
     *
     */
-  private def message = cache.getOrElse( "hello-world#message", expiration = 10.seconds ) {
-    s"This message was created at ${ now.asString }."
+  private def message = cache.getOrElse("hello-world#message", expiration = 10.seconds) {
+    s"This message was created at ${now.asString}."
   }
-
 
   /**
     *
@@ -50,26 +45,53 @@ class HomeController @Inject()( cache: CacheAsyncApi, cc: ControllerComponents )
     *
     *
     */
-  private def obj = cache.getOrElse( "hello-world#object", expiration = 8.seconds ) {
+  private def obj = cache.getOrElse("hello-world#object", expiration = 8.seconds) {
     MyObject.next
   }
-
 
   def index = Action.async {
     //
     // asynchronously get both cached values
     // construct the result
     //
+    testMaps()
     for {
       message <- this.message
       obj <- this.obj
     } yield {
-      Ok( views.html.index( message, obj, now.asString ) )
+      Ok(views.html.index(message, obj, now.asString))
     }
   }
 
-}
+  def testMaps(): Unit = {
+    // enables Set operations
+    // Scala wrapper over the map at this key
+    cache.map[MyObject]("my-map")
 
+    // get the whole map
+    cache.map[MyObject]("my-map").toMap
+    cache.map[MyObject]("my-map").keySet
+    cache.map[MyObject]("my-map").values
+
+    // test existence in the map
+    cache.map[MyObject]("my-map").contains("ABC")
+
+    // get single value
+    cache.map[MyObject]("my-map").get("ABC")
+
+    // add values into the map
+    cache.map[MyObject]("my-map").add("ABC", MyObject.next)
+
+    // size of the map
+    cache.map[MyObject]("my-map").size
+    cache.map[MyObject]("my-map").isEmpty
+    cache.map[MyObject]("my-map").nonEmpty
+
+    // remove the value
+    cache.map[MyObject]("my-map").remove("ABC")
+    println("testMaps ok")
+  }
+}
 /**
   *
   *
@@ -81,22 +103,17 @@ class HomeController @Inject()( cache: CacheAsyncApi, cc: ControllerComponents )
   *
   *
   */
-case class MyObject( index: Int, createdAt: LocalDateTime ) extends Serializable {
+case class MyObject(index: Int, createdAt: LocalDateTime) extends Serializable {
   import Imports._
-
   def createdAtString = createdAt.asString
 }
-
 object MyObject {
-
   import Imports._
-
   // atomic integer used to prevent concurrency issues and race conditions
-  private val nextIndex = new AtomicInteger( 1 )
+  private val nextIndex = new AtomicInteger(1)
 
-  def next = MyObject( index = nextIndex.getAndIncrement(), now )
+  def next = MyObject(index = nextIndex.getAndIncrement(), now)
 }
-
 /**
   *
   *
@@ -105,10 +122,8 @@ object MyObject {
   *
   */
 object Imports {
-
-  implicit class RichDate( val date: LocalDateTime ) extends AnyVal {
-    def asString = DateTimeFormatter.ofPattern( "HH:mm:ss" ).format( date )
+  implicit class RichDate(val date: LocalDateTime) extends AnyVal {
+    def asString = DateTimeFormatter.ofPattern("HH:mm:ss").format(date)
   }
-
   def now = LocalDateTime.now()
 }
