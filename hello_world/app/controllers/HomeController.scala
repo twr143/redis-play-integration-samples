@@ -3,8 +3,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject._
+
 import controllers.MyObject.nextIndex
-import scala.concurrent.ExecutionContext
+
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import play.api.cache.redis.CacheAsyncApi
 import play.api.mvc._
@@ -63,6 +65,8 @@ class HomeController @Inject()(cache: CacheAsyncApi, cc: ControllerComponents)(i
     }
   }
 
+  var counter: Int = 0
+
   def testMaps(): Unit = {
     // enables Set operations
     // Scala wrapper over the map at this key
@@ -75,23 +79,38 @@ class HomeController @Inject()(cache: CacheAsyncApi, cc: ControllerComponents)(i
 
     // test existence in the map
     cache.map[MyObject]("my-map").contains("ABC")
-
     // add values into the map
-    cache.map[MyObject]("my-map").add("ABC", MyObject.next).map { _ =>
-      // get single value
-      cache.map[MyObject]("my-map").get("ABC").map {
-        case Some(myObject) => println(s"got cached myobj $myObject")
-        case None => println(s"nothing found in cache for ABC")
+    val key = "ABC-" + counter
+    println(s"key=$key")
+    //    cache.map[MyObject]("my-map").add(key, MyObject.next).map { _ =>
+    //       get single value
+    //      cache.map[MyObject]("my-map").get(key).map {
+    //        case Some(myObject) => println(s"got cached myobj $myObject")
+    //        case None => println(s"nothing found in cache for ABC")
+    //      }
+    //    }
+    (for {
+      _ <- cache.map[MyObject]("my-map").add(key, MyObject.next)
+      value <- cache.map[MyObject]("my-map").get(key)
+      _ <- if (value.nonEmpty) {
+        println(s"got cached myobj ${value.get}")
+        Future.successful(())
+      } else {
+        println(s"nothing found in cache for $key")
+        Future.successful(())
       }
+      _ <- cache.map[MyObject]("my-map").remove(key)
+    } yield ()).map {
+      _ =>
+        cache.map[MyObject]("my-map").size
+        cache.map[MyObject]("my-map").isEmpty
+        cache.map[MyObject]("my-map").nonEmpty
+
+        // remove the value
+        println("testMaps ok-" + counter)
+        counter += 1
     }
     // size of the map
-    cache.map[MyObject]("my-map").size
-    cache.map[MyObject]("my-map").isEmpty
-    cache.map[MyObject]("my-map").nonEmpty
-
-    // remove the value
-    cache.map[MyObject]("my-map").remove("ABC")
-    println("testMaps ok")
   }
 }
 /**
