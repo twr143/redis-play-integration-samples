@@ -30,8 +30,10 @@ class HomeController @Inject()
 
   private def action(instance: CacheAsyncApi, name: String) = instance.get[String]("named-caches#message").map {
     case Some(value) => s"The value is $value"
+    case None if name.equalsIgnoreCase("local") =>
+      instance.set("named-caches#message", now.asString, 5.seconds)
+      s"no cache available for the message $name"
     case None =>
-      instance.set("named-caches#message", 1, 5.seconds)
       s"no cache available for the message $name"
   }
 
