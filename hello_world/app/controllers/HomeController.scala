@@ -76,12 +76,14 @@ class HomeController @Inject()(cache: CacheAsyncApi, cc: ControllerComponents)(i
     // test existence in the map
     cache.map[MyObject]("my-map").contains("ABC")
 
-    // get single value
-    cache.map[MyObject]("my-map").get("ABC")
-
     // add values into the map
-    cache.map[MyObject]("my-map").add("ABC", MyObject.next)
-
+    cache.map[MyObject]("my-map").add("ABC", MyObject.next).map { _ =>
+      // get single value
+      cache.map[MyObject]("my-map").get("ABC").map {
+        case Some(myObject) => println(s"got cached myobj $myObject")
+        case None => println(s"nothing found in cache for ABC")
+      }
+    }
     // size of the map
     cache.map[MyObject]("my-map").size
     cache.map[MyObject]("my-map").isEmpty
@@ -103,7 +105,7 @@ class HomeController @Inject()(cache: CacheAsyncApi, cc: ControllerComponents)(i
   *
   *
   */
-case class MyObject(index: Int, createdAt: LocalDateTime) extends Serializable {
+case class MyObject(index: Int, createdAt: LocalDateTime) {
   import Imports._
   def createdAtString = createdAt.asString
 }

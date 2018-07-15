@@ -25,6 +25,7 @@ object Sample {
       PlayImport.cacheApi
     ),
 
+    libraryDependencies += "com.github.romix.akka" %% "akka-kryo-serialization" % "0.5.2",
     resolvers ++= Seq(
       "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       Resolver.sonatypeRepo( "snapshots" )
